@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文章详情 - 我的技术博客</title>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+  <header>
+    <h1>我的技术博客</h1>
+    <nav>
+      <a href="index.html">首页</a>
+      <a href="comments.html">留言板</a>
+    </nav>
+  </header>
+
+  <main>
+    <div id="article-detail" style="max-width: 800px; margin: 0 auto;"></div>
+  </main>
+
+  <script type="module">
+    import { supabase } from './js/supabase.js';
+
+    // 从URL获取文章ID（如 ?id=xxx）
+    function getArticleId() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('id');
+    }
+
+    // 加载文章详情
+    async function loadArticleDetail() {
+      const articleId = getArticleId();
+      const articleContainer = document.getElementById('article-detail');
+
+      if (!articleId) {
+        articleContainer.innerHTML = '文章ID不存在';
+        return;
+      }
+
+      articleContainer.innerHTML = '加载中...';
+
+      const { data: article } = await supabase
+        .from('articles')
+        .select(`
+          *,
+          tags:tag_id(name)
+        `)
+        .eq('id', articleId)
+        .single(); // 获取单条数据
+
+      if (!article) {
+        articleContainer.innerHTML = '文章不存在';
+        return;
+      }
+
+      // 渲染文章详情
+      articleContainer.innerHTML = `
+        <span class="tag">${article.tags.name}</span>
+        <h1 style="margin: 20px 0; color: #1e40af;">${article.title}</h1>
+        <p style="color: #6b7280; margin-bottom: 30px;">发布时间：${new Date(article.created_at).toLocaleString()}</p>
+        <div style="line-height: 2; font-size: 18px;">${article.content.replace(/\n/g, '<br>')}</div>
+        <div style="margin-top: 50px;">
+          <a href="index.html" style="color: #2563eb; text-decoration: none;">返回首页</a>
+        </div>
+      `;
+    }
+
+    window.onload = loadArticleDetail;
+  </script>
+</body>
+</html>
