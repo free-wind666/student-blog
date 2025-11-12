@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>留言板 - 我的技术博客</title>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+  <header>
+    <h1>我的技术博客</h1>
+    <nav>
+      <a href="index.html">首页</a>
+      <a href="comments.html">留言板</a>
+    </nav>
+  </header>
+
+  <main>
+    <h2>留言板</h2>
+    <!-- 留言表单 -->
+    <form id="comment-form">
+      <input type="text" name="nickname" placeholder="你的昵称" required>
+      <textarea name="content" placeholder="请输入留言内容" rows="5" required></textarea>
+      <button type="submit">提交留言</button>
+    </form>
+
+    <!-- 留言列表 -->
+    <div id="comments-container" class="comment-list"></div>
+  </main>
+
+  <script type="module">
+    import { supabase } from './js/supabase.js';
+
+    // 加载所有留言
+    async function loadComments() {
+      const { data: comments } = await supabase
+        .from('comments')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      const commentsContainer = document.getElementById('comments-container');
+      commentsContainer.innerHTML = comments.map(comment => `
+        <div class="comment-item">
+          <div class="nickname">${comment.nickname}</div>
+          <div class="time">${new Date(comment.created_at).toLocaleString()}</div>
+          <div>${comment.content}</div>
+        </div>
+      `).join('');
+    }
+
+    // 提交留言
+    document.getElementById('comment-form').addEventListener('submit', async (e) => {
+      e.preventDefault(); // 阻止表单默认提交
+      const formData = new FormData(e.target);
+      const nickname = formData.get('nickname');
+      const content = formData.get('content');
+
+      // 提交到 Supabase
+      await supabase.from('comments').insert([{ nickname, content }]);
+
+      // 重置表单 + 重新加载留言
+      e.target.reset();
+      loadComments();
+    });
+
+    // 页面加载时执行
+    window.onload = loadComments;
+  </script>
+</body>
+</html>
