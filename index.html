@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的技术博客 - 首页</title>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+  <header>
+    <h1>我的技术博客</h1>
+    <nav>
+      <a href="index.html">首页</a>
+      <a href="comments.html">留言板</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- 标签筛选区 -->
+    <div id="tags-container" class="tags"></div>
+
+    <!-- 文章列表区 -->
+    <div id="articles-container" class="article-list"></div>
+  </main>
+
+  <!-- 引入 Supabase 客户端和自定义脚本 -->
+  <script type="module">
+    import { supabase } from './js/supabase.js';
+
+    // 加载所有标签
+    async function loadTags() {
+      const { data: tags } = await supabase.from('tags').select('*');
+      const tagsContainer = document.getElementById('tags-container');
+      tags.forEach(tag => {
+        const tagElement = document.createElement('span');
+        tagElement.className = 'tag';
+        tagElement.textContent = tag.name;
+        tagElement.dataset.tagId = tag.id;
+        // 标签点击筛选文章
+        tagElement.addEventListener('click', () => loadArticles(tag.id));
+        tagsContainer.appendChild(tagElement);
+      });
+      // 默认加载所有文章
+      loadArticles();
+    }
+
+    // 加载文章（支持按标签筛选）
+    async function loadArticles(tagId = null) {
+      const articlesContainer = document.getElementById('articles-container');
+      articlesContainer.innerHTML = '加载中...'; // 加载状态
+
+      let query = supabase
+        .from('articles')
+        .select(`
+          *,
+          tags:tag_id(name) // 关联标签表，获取标签名称
+        `)
+        .order('created_at', { ascending: false });
+
+      // 如果有标签ID，筛选对应文章
+      if (tagId) {
+        query = query.eq('tag_id', tagId);
+      }
+
+      const { data: articles } = await query;
+
+      if (articles.length === 0) {
+        articlesContainer.innerHTML = '暂无文章';
+        return;
+      }
+
+      // 渲染文章列表
+      articlesContainer.innerHTML = articles.map(article => `
+        <div class="article-card">
+          <span class="tag">${article.tags.name}</span>
+          <h2>${article.title}</h2>
+          <p>${article.content.substring(0, 100)}...</p>
+          <a href="article.html?id=${article.id}" style="color: #2563eb; text-decoration: none;">查看全文 →</a>
+        </div>
+      `).join('');
+    }
+
+    // 页面加载时执行
+    window.onload = loadTags;
+  </script>
+</body>
+</html>
